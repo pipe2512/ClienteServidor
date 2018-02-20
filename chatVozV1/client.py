@@ -8,7 +8,7 @@ import threading
 def grabarAudio(stream):
     frames = []
     print("Grabando")
-    for i in range(0, int(44100 / 1024 * 5)): #RATE/CHUNK*TIEMPODEGRABADO
+    for i in range(0, int(44100 / 1024 * 0.5)): #RATE/CHUNK*TIEMPODEGRABADO
         data = stream.read(1024)#CHUNK
         frames.append(data)
     print("******")
@@ -28,7 +28,7 @@ def envioMensajes(cliente, s):
     while True:
         retorno = grabarAudio(stream)
         audio = (b''.join(retorno))
-        converso = str(audio, 'utf-16')
+        converso = audio.decode('utf-16', "ignore")
         s.send_json({"operacion" : "audio", "frames" : converso, "cliente" : cliente})
         s.recv_json()
 
