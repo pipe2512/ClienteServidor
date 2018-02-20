@@ -27,13 +27,13 @@ def main():
             p = context2.socket(zmq.REQ)
             p.connect("tcp://{}:{}".format(msg["ip"], msg["puerto"]))
             s.send_json({"okey" : "okey"})
-            clientes = {msg["alias"] : [p, "0"]}#Socket y bandera de estado(Ocupado 1/Libre 0)
+            clientes[msg["alias"]] = [p, "0"]#Socket y bandera de estado(Ocupado 1/Libre 0)
         if msg["operacion"] == "clientes":
-            s.send_json({"clientes" : list(cliente.keys())})
+            s.send_json({"clientes" : list(clientes.keys())})
         if msg["operacion"] == "conexion":
-            clientes[msg["conexion"]].send_json({"operacion" : "ocupado", "estado" : "0"})
-            msg = clientes[msg["conexion"]].recv_json()
-            s.send_json(msg)####Tener en cuenta###### Puede ser un error
+            clientes[msg["conexion"]][0].send_json({"operacion" : "ocupado", "estado" : "0", "alias" : msg["alias"]})
+            msg = clientes[msg["conexion"]][0].recv_json()
+            s.send_json(msg)
 
 
 

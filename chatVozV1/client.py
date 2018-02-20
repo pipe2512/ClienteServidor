@@ -59,39 +59,50 @@ def grabarAudio():
     retorno = (b''.join(frames))
     return retorno
 
-def recepcionMensja(banderaOcupado):
-    msg = p.recv_json()
-    if msg["operacion"] == "ocupado":
-        if banderaOcupado == "0" and msg["estado"] == "0":
-            p.send_json({"resultado" : "conectado"})
-            banderaOcupado = "1"
-        elif banderaOcupado == "1" and msg["estado"] == "0":
-            p.send_json({"resultado" : "ocupado"})
-        elif banderaOcupado == "1" and msg["estado"] == "1":
-            p.send_json({"resultado" : "desconectado"})
-            banderaOcupado = "0"
+def envioMensajes(cliente, s):
+    print("inicio el hilo de envios de mensajes con: " + cliente)
 
-def menu(banderaOcupado):
-    print("Seleccione una opcion: ")
-    print ("1.Conectarme a otro cliente")
-    print("2.Salir del chat")
-    opcion = input()
-    if opcion == 1 and banderaOcupado == "0":
-        print("Ingrese el alias del cliente")
-        s.send_json({"operation" : "clientes"})
-        msg = s.recv_json()
-        print(msg["clientes"])
-        opcion2 = input()
-        s.send_json({"conexion" : opcion2})
-        msg = s.recv_json()#Mensaje de okey
-        if msg["resultado"] == "conectado":
-            banderaOcupado = "1"
-    elif opcion == 1 and banderaOcupado == "1":
-        print("Usted se encuentra conectado con otro cliente")
-    elif opcion == 2 and banderaOcupado == "1":
-        print("pendiente.......")
-    else:
-        print("No se encuentra conectado con nadie")
+def recepcionMensaje(banderaOcupado, p, s):
+    while True:
+        msg = p.recv_json()
+        if msg["operacion"] == "ocupado":
+            if banderaOcupado == "0" and msg["estado"] == "0":
+                p.send_json({"resultado" : "conectado"})
+                banderaOcupado = "1"
+                hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(msg["alias"], s))
+                hiloEnvioMensajes.start()
+                ###################AQUI SE PONDRIA EL HILO DE ENVIOMENSAJES##################
+            elif banderaOcupado == "1" and msg["estado"] == "0":
+                p.send_json({"resultado" : "ocupado"})
+            elif banderaOcupado == "1" and msg["estado"] == "1":
+                p.send_json({"resultado" : "desconectado"})
+                banderaOcupado = "0"
+
+def menu(banderaOcupado, alias, s):
+    while True:
+        print("Seleccione una opcion: ")
+        print ("1.Conectarme a otro cliente")
+        print("2.Salir del chat")
+        opcion = input()
+        if opcion == "1" and banderaOcupado == "0":
+            print("Ingrese el alias del cliente")
+            s.send_json({"operacion" : "clientes"})
+            msg = s.recv_json()
+            print(msg["clientes"])
+            opcion2 = input()
+            s.send_json({"conexion" : opcion2, "operacion" : "conexion", "alias" : alias})
+            msg = s.recv_json()#Mensaje de okey
+            if msg["resultado"] == "conectado":
+                banderaOcupado = "1"
+                hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(opcion2, s))
+                hiloEnvioMensajes.start()
+                ###################AQUI SE PONDRIA EL HILO DE ENVIOMENSAJES##################
+        elif opcion == "1" and banderaOcupado == "1":
+            print("Usted se encuentra conectado con otro cliente")
+        elif opcion == "2" and banderaOcupado == "1":
+            print("pendiente.......")
+        else:
+            print("No se encuentra conectado con nadie")
 
 
 def main():
@@ -119,9 +130,11 @@ def main():
 
     #Conexion primera vez al servidor
     s.send_json({"ip" : ipPropia, "puerto" : puertoPropio, "alias" : alias, "operacion" : "registro"})
-    print("elegir el ciente con el que se va a conectar: ")
     msg = s.recv_json()#Mensaje de okey
-    print(msg["clientes"])
+    hiloMenu = threading.Thread(target = menu, args=(banderaOcupado, alias, s))####Preguntar acerca de el cambio de variables en varios procesos
+    hiloRecepcionMensaje = threading.Thread(target = recepcionMensaje, args=(banderaOcupado, p, s))
+    hiloMenu.start()
+    hiloRecepcionMensaje.start()
 
 
 if __name__ == '__main__':
