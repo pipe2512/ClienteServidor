@@ -28,12 +28,17 @@ def main():
             p.connect("tcp://{}:{}".format(msg["ip"], msg["puerto"]))
             s.send_json({"okey" : "okey"})
             clientes[msg["alias"]] = [p, "0"]#Socket y bandera de estado(Ocupado 1/Libre 0)
-        if msg["operacion"] == "clientes":
+        elif msg["operacion"] == "clientes":
             s.send_json({"clientes" : list(clientes.keys())})
-        if msg["operacion"] == "conexion":
+        elif msg["operacion"] == "conexion":
             clientes[msg["conexion"]][0].send_json({"operacion" : "ocupado", "estado" : "0", "alias" : msg["alias"]})
             msg = clientes[msg["conexion"]][0].recv_json()
             s.send_json(msg)
+        elif msg["operacion"] == "audio":
+            s.send_json({"okey" : "okey"})
+            clientes[msg["cliente"]][0].send_json({"operacion" : "audio" , "frames" : msg["frames"]})
+            clientes[msg["cliente"]][0].recv_json()
+
 
 
 

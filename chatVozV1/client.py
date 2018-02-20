@@ -5,64 +5,46 @@ import zmq
 import socket
 import threading
 
-def pruebaReproducir(frames):
-    CHUNK = 1024
+def grabarAudio(stream):
+    frames = []
+    print("Grabando")
+    for i in range(0, int(44100 / 1024 * 5)): #RATE/CHUNK*TIEMPODEGRABADO
+        data = stream.read(1024)#CHUNK
+        frames.append(data)
+    print("******")
+    #retorno = (b''.join(frames))
+    return frames
 
-    #wf = wave.open("paso.wav", 'rb')
-
-    p = pyaudio.PyAudio()
-
-    stream = p.open(format = pyaudio.paInt16,
-                    channels = 2,
-                    rate = 44100,
-                    output=True)
-
-    #data = wf.readframes(CHUNK)
-
-    #for i in range(220160):
-    #    print("estoy entrando")
-    stream.write(frames)
-        #data = wf.readframes(CHUNK)
-
-    stream.stop_stream()
-    stream.close()
-
-    p.terminate()
-
-def grabarAudio():
-    #Parametros para el manejo del audio
-    CHUNK = 1024
-    RECORD_SECONDS = 5
-
+def envioMensajes(cliente, s):
     #Instanciamos pyaudio
-    p = pyaudio.PyAudio()
+    play = pyaudio.PyAudio()
 
     #Creamos el stream para grabar el audio
-    stream = p.open(format = pyaudio.paInt16,
+    stream = play.open(format = pyaudio.paInt16,
                     channels = 2,
                     rate = 44100,
                     input=True,
-                    frames_per_buffer=CHUNK)
-
-    frames = []
-    numeroFrames = int(RATE / CHUNK * RECORD_SECONDS)
-
-    print("Grabando")
-    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-        data = stream.read(CHUNK)
-        frames.append(data)
-    print("******")
+                    frames_per_buffer=1024)#CHUNK
+    while True:
+        retorno = grabarAudio(stream)
+        audio = (b''.join(retorno))
+        converso = str(audio, 'utf-16')
+        s.send_json({"operacion" : "audio", "frames" : converso, "cliente" : cliente})
+        s.recv_json()
 
     stream.stop_stream()
     stream.close()
-    p.terminate()
-    retorno = (b''.join(frames))
-    return retorno
-
-def envioMensajes(cliente, s):
-    print("inicio el hilo de envios de mensajes con: " + cliente)
+    play.terminate()
 
 def recepcionMensaje(banderaOcupado, p, s):
+    #Instanciamos el pyaudio
+    play = pyaudio.PyAudio()
+
+    #Creamos el stream para reproducir el audio
+    stream = play.open(format = pyaudio.paInt16,
+                    channels = 2,
+                    rate = 44100,
+                    output=True)
     while True:
         msg = p.recv_json()
         if msg["operacion"] == "ocupado":
@@ -77,6 +59,17 @@ def recepcionMensaje(banderaOcupado, p, s):
             elif banderaOcupado == "1" and msg["estado"] == "1":
                 p.send_json({"resultado" : "desconectado"})
                 banderaOcupado = "0"
+        if msg["operacion"] == "audio":
+            p.send_json({"okey" : "okey"})
+            print("voy a reproducir")
+            frames = msg["frames"]
+            converso = frames.encode('utf-16')
+            stream.write(converso)
+
+    stream.stop_stream()
+    stream.close()
+    play.terminate()
+
 
 def menu(banderaOcupado, alias, s):
     while True:
