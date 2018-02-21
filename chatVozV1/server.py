@@ -34,6 +34,10 @@ def main():
             clientes[msg["conexion"]][0].send_json({"operacion" : "ocupado", "estado" : "0", "alias" : msg["alias"]})
             msg = clientes[msg["conexion"]][0].recv_json()
             s.send_json(msg)
+        elif msg["operacion"] == "desconexion":
+            s.send_json({"okey" : "okey"})
+            clientes[msg["alias"]][0].send_json({"operacion" : "desconexion"})
+            clientes[msg["alias"]][0].recv_json()
         elif msg["operacion"] == "audio":
             s.send_json({"okey" : "okey"})
             clientes[msg["cliente"]][0].send_json({"operacion" : "audio" , "frames" : msg["frames"]})
