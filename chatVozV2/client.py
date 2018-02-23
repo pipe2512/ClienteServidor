@@ -13,7 +13,7 @@ def grabarAudio(stream):
     #retorno = (b''.join(frames))
     return frames
 
-def envioMensajes(cliente, s, parada):
+def envioMensajes(cliente, s, parada, lista):
     #Instanciamos pyaudio
     play = pyaudio.PyAudio()
 
@@ -27,14 +27,14 @@ def envioMensajes(cliente, s, parada):
         retorno = grabarAudio(stream)
         audio = (b''.join(retorno))
         converso = audio.decode('utf-16', "ignore")
-        s.send_json({"operacion" : "audio", "frames" : converso, "cliente" : cliente})
+        s.send_json({"operacion" : "audio", "frames" : converso, "cliente" : list(lista)})
         s.recv_json()
 
     stream.stop_stream()
     stream.close()
     play.terminate()
 
-def recepcionMensaje(banderaOcupado, p, s, parada):
+def recepcionMensaje(banderaOcupado, p, s, parada, lista):
     #Instanciamos el pyaudio
     play = pyaudio.PyAudio()
 
@@ -46,19 +46,16 @@ def recepcionMensaje(banderaOcupado, p, s, parada):
     while True:
         msg = p.recv_json()
         if msg["operacion"] == "ocupado":
-            if banderaOcupado == "0" and msg["estado"] == "0":
+            if banderaOcupado == "0":
                 p.send_json({"resultado" : "conectado"})
                 banderaOcupado = "1"
                 parada = True
-                hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(msg["alias"], s, parada))
+                hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(msg["alias"], s, parada, lista))
                 hiloEnvioMensajes.start()
                 ###################AQUI SE PONDRIA EL HILO DE ENVIOMENSAJES##################
-            elif banderaOcupado == "1" and msg["estado"] == "0":
-                p.send_json({"resultado" : "ocupado"})
-            elif banderaOcupado == "1" and msg["estado"] == "1":
-                p.send_json({"resultado" : "desconectado"})
-                banderaOcupado = "0"
-                parada = False
+            elif banderaOcupado == "1" :
+                p.send_json({"resultado" : "ocupado", "lista" : list(lista)})
+                lista.append(msg["alias"])
         elif msg["operacion"] == "desconexion":
             if banderaOcupado == "1":
                 banderaOcupado = "0"
@@ -75,7 +72,7 @@ def recepcionMensaje(banderaOcupado, p, s, parada):
     play.terminate()
 
 
-def menu(banderaOcupado, alias, s, parada):
+def menu(banderaOcupado, alias, s, parada, lista_usuarios):
     while True:
         print("Seleccione una opcion: ")
         print ("1.Conectarme a otro cliente")
@@ -88,11 +85,18 @@ def menu(banderaOcupado, alias, s, parada):
             print(msg["clientes"])
             opcion2 = input()
             s.send_json({"conexion" : opcion2, "operacion" : "conexion", "alias" : alias})
-            msg = s.recv_json()#Mensaje de okey
+            msg = s.recv_json()#Aca colocamos la lista de alias de los usuarios de la persona con quien me conecte
             if msg["resultado"] == "conectado":
+                lista_usuarios.append(opcion2)
                 banderaOcupado = "1"
                 parada = True
-                hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(opcion2, s, parada))
+                hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(opcion2, s, parada, lista_usuarios))
+                hiloEnvioMensajes.start()
+            elif msg["resultado"] == "ocupado":
+                lista_usuarios = msg["lista"]
+                banderaOcupado = "1"
+                parada = True
+                hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(opcion2, s, parada, lista_usuarios))
                 hiloEnvioMensajes.start()
                 ###################AQUI SE PONDRIA EL HILO DE ENVIOMENSAJES##################
         elif opcion == "1" and banderaOcupado == "1":
@@ -120,6 +124,7 @@ def main():
     alias = sys.argv[5]#Alias del cliente
     banderaOcupado = "0"
     parada = False
+    lista_usuarios = []
 
     #Conexion con el servidor.
     context = zmq.Context()
@@ -134,8 +139,8 @@ def main():
     #Conexion primera vez al servidor
     s.send_json({"ip" : ipPropia, "puerto" : puertoPropio, "alias" : alias, "operacion" : "registro"})
     msg = s.recv_json()#Mensaje de okey
-    hiloMenu = threading.Thread(target = menu, args=(banderaOcupado, alias, s, parada))####Preguntar acerca de el cambio de variables en varios procesos
-    hiloRecepcionMensaje = threading.Thread(target = recepcionMensaje, args=(banderaOcupado, p, s, parada))
+    hiloMenu = threading.Thread(target = menu, args=(banderaOcupado, alias, s, parada,lista_usuarios))
+    hiloRecepcionMensaje = threading.Thread(target = recepcionMensaje, args=(banderaOcupado, p, s, parada,lista_usuarios))
     hiloMenu.start()
     hiloRecepcionMensaje.start()
 

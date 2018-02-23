@@ -22,6 +22,7 @@ def main():
 
     while True:
         msg = s.recv_json()
+        print(msg)
         if msg["operacion"] == "registro":
             context2 = zmq.Context()
             p = context2.socket(zmq.REQ)
@@ -40,9 +41,14 @@ def main():
             clientes[msg["alias"]][0].send_json({"operacion" : "desconexion"})
             clientes[msg["alias"]][0].recv_json()
         elif msg["operacion"] == "audio":
-            s.send_json({"okey" : "okey"})
-            clientes[msg["cliente"]][0].send_json({"operacion" : "audio" , "frames" : msg["frames"]})
-            clientes[msg["cliente"]][0].recv_json()
+            s.send_json({"okey" : "okey"}) #tener encuenta el delay
+            print("obvi")
+            print(msg["cliente"])
+            print("holi")
+            for i in msg["cliente"]:
+                clientes[i][0].send_json({"operacion" : "audio" , "frames" : msg["frames"]})
+                clientes[i][0].recv_json()
+                
 
 
 
