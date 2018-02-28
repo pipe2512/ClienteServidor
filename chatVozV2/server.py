@@ -31,7 +31,7 @@ def main():
         elif msg["operacion"] == "clientes":
             s.send_json({"clientes" : list(clientes.keys())})
         elif msg["operacion"] == "conexion":
-            clientes[msg["conexion"]][0].send_json({"operacion" : "ocupado", "estado" : "0", "alias" : msg["alias"]})
+            clientes[msg["conexion"]][0].send_json({"operacion" : "ocupado", "estado" : "0", "alias" : msg["alias"], "lista" : list(msg["lista"])})
             msg = clientes[msg["conexion"]][0].recv_json()
             s.send_json(msg)
         elif msg["operacion"] == "desconexion":

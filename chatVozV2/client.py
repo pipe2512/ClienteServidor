@@ -54,6 +54,7 @@ def recepcionMensaje(banderaOcupado, p, s, parada, lista):
                 p.send_json({"resultado" : "conectado"})
                 banderaOcupado = "1"
                 parada = True
+                lista = list(msg["lista"])
                 lista.append(msg["alias"])
                 hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(msg["alias"], s, parada, lista))
                 hiloEnvioMensajes.start()
@@ -90,7 +91,7 @@ def menu(banderaOcupado, alias, s, parada, lista_usuarios):
             msg = s.recv_json()
             print(msg["clientes"])
             opcion2 = input()
-            s.send_json({"conexion" : opcion2, "operacion" : "conexion", "alias" : alias})
+            s.send_json({"conexion" : opcion2, "operacion" : "conexion", "alias" : alias,"lista" : list(lista_usuarios)})
             msg = s.recv_json()#Aca colocamos la lista de alias de los usuarios de la persona con quien me conecte
             if msg["resultado"] == "conectado":
                 lista_usuarios.append(opcion2)
