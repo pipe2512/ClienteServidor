@@ -4,6 +4,7 @@ import sys
 import zmq
 import socket
 import threading
+import time
 
 def grabarAudio(stream):
     frames = []
@@ -16,6 +17,7 @@ def grabarAudio(stream):
 def envioMensajes(cliente, s, parada, lista):
     #Instanciamos pyaudio
     play = pyaudio.PyAudio()
+    print("entre a envio de mensajes")
 
     #Creamos el stream para grabar el audio
     stream = play.open(format = pyaudio.paInt16,
@@ -27,6 +29,7 @@ def envioMensajes(cliente, s, parada, lista):
         retorno = grabarAudio(stream)
         audio = (b''.join(retorno))
         converso = audio.decode('utf-16', "ignore")
+        print(lista)
         s.send_json({"operacion" : "audio", "frames" : converso, "cliente" : list(lista)})
         s.recv_json()
 
@@ -37,6 +40,7 @@ def envioMensajes(cliente, s, parada, lista):
 def recepcionMensaje(banderaOcupado, p, s, parada, lista):
     #Instanciamos el pyaudio
     play = pyaudio.PyAudio()
+    print("Estoy escuchando")
 
     #Creamos el stream para reproducir el audio
     stream = play.open(format = pyaudio.paInt16,
@@ -50,6 +54,7 @@ def recepcionMensaje(banderaOcupado, p, s, parada, lista):
                 p.send_json({"resultado" : "conectado"})
                 banderaOcupado = "1"
                 parada = True
+                lista.append(msg["alias"])
                 hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(msg["alias"], s, parada, lista))
                 hiloEnvioMensajes.start()
                 ###################AQUI SE PONDRIA EL HILO DE ENVIOMENSAJES##################
@@ -62,6 +67,7 @@ def recepcionMensaje(banderaOcupado, p, s, parada, lista):
                 parada = False
                 p.send_json({"resultado" : "ocupado"})
         if msg["operacion"] == "audio":
+            #time.sleep(0.3)
             p.send_json({"okey" : "okey"})
             frames = msg["frames"]
             converso = frames.encode('utf-16')
@@ -93,7 +99,8 @@ def menu(banderaOcupado, alias, s, parada, lista_usuarios):
                 hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(opcion2, s, parada, lista_usuarios))
                 hiloEnvioMensajes.start()
             elif msg["resultado"] == "ocupado":
-                lista_usuarios = msg["lista"]
+                lista_usuarios = list(msg["lista"])
+                lista_usuarios.append(opcion2)
                 banderaOcupado = "1"
                 parada = True
                 hiloEnvioMensajes = threading.Thread(target = envioMensajes, args=(opcion2, s, parada, lista_usuarios))
