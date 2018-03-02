@@ -36,7 +36,8 @@ def envioMensajes(cliente, s, parada, lista):
     stream.close()
     play.terminate()
 
-def recepcionMensaje(banderaOcupad, p, s, parada, lista):
+
+def reproducir_lista(lock, lista_reproduccion, aux):
     #Instanciamos el pyaudio
     play = pyaudio.PyAudio()
 
@@ -45,6 +46,22 @@ def recepcionMensaje(banderaOcupad, p, s, parada, lista):
                     channels = 2,
                     rate = 44100,
                     output=True)
+    i = 0
+    while True:
+        if(len(lista_reproduccion) > i):
+            stream.write(lista_reproduccion[i])
+            i = i + 1
+    stream.stop_stream()
+    stream.close()
+    play.terminate()
+
+
+def recepcionMensaje(banderaOcupad, p, s, parada, lista):
+    lista_reproduccion = []
+    lock = threading.Lock()
+    aux = 1
+    hiloreproducir_lista = threading.Thread(target = reproducir_lista, args=(lock, lista_reproduccion, aux))
+    hiloreproducir_lista.start()
     while True:
         msg = p.recv_json()
         if msg["operacion"] == "ocupado":
@@ -70,11 +87,8 @@ def recepcionMensaje(banderaOcupad, p, s, parada, lista):
             p.send_json({"okey" : "okey"})
             frames = msg["frames"]
             converso = frames.encode('utf-16')
-            stream.write(converso)
-
-    stream.stop_stream()
-    stream.close()
-    play.terminate()
+            lista_reproduccion.append(converso)
+            aux = aux + 1;
 
 
 def menu(banderaOcupad, alias, s, parada, lista_usuarios):
