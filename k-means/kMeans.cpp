@@ -12,7 +12,7 @@ typedef vector<tuple<size_t, size_t>> vectorTupla;
 typedef unordered_map<size_t, vectorTupla> tabla;
 
 
-void lecturaArchivo(tabla &datos){
+void lecturaArchivo(tabla &datos, vector<size_t> &keys){
   ifstream archivo("netflix/combined_data_1.txt");
   char linea[256];
   string line;
@@ -53,6 +53,7 @@ void lecturaArchivo(tabla &datos){
               //cout << "entro:" << calificacion <<"\n";
               argumentos.push_back(make_tuple(idPelicula, calificacion));
               datos.insert({key, argumentos});
+              keys.push_back(key);
               argumentos.clear();
             }
             //argumentos.push_back(make_tuple(idPelicula, calificacion));
@@ -67,7 +68,8 @@ void lecturaArchivo(tabla &datos){
 
 int main(){
   tabla datos;
-  lecturaArchivo(datos);
+  vector<size_t> keys;
+  lecturaArchivo(datos, keys);
   /*for(const auto& m : datos)
   {
     cout << "Key:[" << m.first << "]\n";
