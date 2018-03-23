@@ -10,7 +10,7 @@
 
 using namespace std;
 
-typedef vector<tuple<size_t, size_t>> vectorTupla;
+typedef vector<tuple<size_t, double>> vectorTupla;
 typedef unordered_map<size_t, vectorTupla> tabla;
 typedef unordered_map<size_t, double> tablaNorma;
 typedef unordered_map<size_t, tuple<double, double>> tablaDistacias;
@@ -38,6 +38,45 @@ double normaCentroide(vectorTupla centroide){
   return calculo;
 }
 
+void generarDatosCero(vectorTupla &calculoCentroide)
+{
+	for(size_t i = 1; i <= 17770; i++)
+	{
+		calculoCentroide.push_back(make_tuple(i,0));
+	}
+
+}
+
+void calcula_promedio(tabla &datos, tabla &centroides, tablaDistacias &distancias){
+	
+	vectorTupla calculoCentroide;
+	size_t cont = 0;
+	double x = 0.0;
+
+	for(const auto recorreCentroide: centroides)
+	{
+		generarDatosCero(calculoCentroide);
+
+		for(const auto recorreDistancia: distancias)
+		{
+			if(get<0>(recorreDistancia) == recorreCentroide.first)
+			{
+				cont++;
+
+				vectorTupla datos_usuario = datos[recorreDistancia.first];
+
+				for(size_t i = 0; i < datos_usuario.size(); i++)
+				{
+					get<1>(calculoCentroide[get<0>(datos_usuario[i-1])]) += get<1>(datos_usuario[i]);	
+				}
+
+			}
+		}
+	//aca va el error esa es la idea
+	}
+}
+
+
 void means(tabla &datos, tabla &centroides, tablaNorma &normas, tablaDistacias &distancias){
   size_t j, productoPunto, usuario = 0;
   tuple<double, double> mejorDistancia;
@@ -50,7 +89,7 @@ void means(tabla &datos, tabla &centroides, tablaNorma &normas, tablaDistacias &
           productoPunto += get<1>(tDatos.second[i]) * get<1>(tCentroides.second[j-1]);
       }
       usuario = tDatos.first;
-      distancia = (productoPunto/(normas[usuario] * normaCentro));//Creo que falta el arcocoseno
+      distancia = acos(productoPunto/(normas[usuario] * normaCentro));//Creo que falta el arcocoseno
       mejorDistancia = distancias[usuario];
       if(get<1>(mejorDistancia) == -1){
         distancias[usuario] = make_tuple(tCentroides.first, distancia);
@@ -68,6 +107,7 @@ void means(tabla &datos, tabla &centroides, tablaNorma &normas, tablaDistacias &
   }
 }
 
+
 void generarCentroide(tabla &centroides, size_t numCentroides){
   random_device rd;
   uniform_int_distribution<int> dist(0, 5);
@@ -81,6 +121,7 @@ void generarCentroide(tabla &centroides, size_t numCentroides){
   }
 }
 
+
 void lecturaArchivo(tabla &datos, tablaDistacias &distancias){
   ifstream archivo("netflix/combined_data_1.txt");
   char linea[256];
@@ -88,7 +129,7 @@ void lecturaArchivo(tabla &datos, tablaDistacias &distancias){
   vectorTupla argumentos;
   size_t idPelicula = 0;
   size_t key = 0;
-  size_t calificacion = 0;
+  double calificacion = 0;
   while(getline(archivo,line))
   //for(int i = 0; i < 100; i++)
   {
