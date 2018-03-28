@@ -48,14 +48,20 @@ void generarDatosCero(vectorTupla &calculoCentroide, vector<size_t> &cont){
 
 }
 
-void calculoError(vectorTupla &calculoCentroide, tabla &centroides){
-  
+double calculoError(vectorTupla calculoCentroide, vectorTupla centroide){///////////////PREGUNTAR A GUSTAVO PORQUE NO SIRVE LA REFERENCIA
+  double error = 0;
+  for(int i = 0; i < centroide.size(); i++){/////////////////////////////////////////////////////
+    //cout << error << " + " << get<1>(centroide[i]) << " - " << get<1>(calculoCentroide[i]) << endl;
+    error += pow((get<1>(centroide[i]) - get<1>(calculoCentroide[i])),2);
+  }
+  //cout << "el error es: " << sqrt(error) << " " << error << endl;
+  return sqrt(error);
 }
 
-void calcula_promedio(tabla &datos, tabla &centroides, tablaDistacias &distancias, vector<size_t> &numIteracion){
+double calcula_promedio(tabla &datos, tabla &centroides, tablaDistacias &distancias, vector<size_t> &numIteracion){
 	vectorTupla calculoCentroide;
   vector<size_t> cont(17770);
-	double x = 0.0;
+	double x = 0.0, error = 0.0;
 	for(const auto recorreCentroide: centroides)
 	{
 		generarDatosCero(calculoCentroide, cont);
@@ -71,49 +77,55 @@ void calcula_promedio(tabla &datos, tabla &centroides, tablaDistacias &distancia
 				}
 			}
 		}
-    cout << "centroide: " << recorreCentroide.first << endl;
+    //cout << "centroide: " << recorreCentroide.first << endl;
     for(int i = 0; i < calculoCentroide.size(); i++){
       if(cont[i] != 0){
-        cout << get<1>(calculoCentroide[i]) << "/" << cont[i] << endl;
-        get<1>(calculoCentroide[i]) = get<1>(calculoCentroide[i]) / cont[i];
+        //cout << get<1>(calculoCentroide[i]) << "/" << cont[i] << endl;
+        get<1>(calculoCentroide[i]) = ceil(get<1>(calculoCentroide[i]) / cont[i]);
       }
     }
+    error += calculoError(calculoCentroide, recorreCentroide.second);
+    centroides[recorreCentroide.first] = calculoCentroide;
     calculoCentroide.clear();
 	//aca va el error esa es la idea
 	}
+  cout << "El error completo es: " << error << endl;
+  return error;
 }
 
 void means(tabla &datos, tabla &centroides, tablaNorma &normas, tablaDistacias &distancias, size_t numCentroides){
   size_t j, productoPunto = 0, usuario = 0;
   tuple<double, double> mejorDistancia;
   vector<size_t> numIteracion(numCentroides, 0);
-  double distancia, normaCentro = 0;
-  for(const auto tCentroides : centroides){
-    normaCentro = normaCentroide(tCentroides.second);
-    for(const auto& tDatos : datos){
-      for(size_t i = 0; i < tDatos.second.size(); i++){
-          j = get<0>(tDatos.second[i]);
-          productoPunto += get<1>(tDatos.second[i]) * get<1>(tCentroides.second[j-1]);
-      }
-      usuario = tDatos.first;
-      distancia = acos(productoPunto/(normas[usuario] * normaCentro));//PREGUNTAR SI ES EN RAD O EN DEG
-      mejorDistancia = distancias[usuario];
-      if(get<1>(mejorDistancia) == -1){
-        distancias[usuario] = make_tuple(tCentroides.first, distancia);
-        numIteracion[tCentroides.first]++;
-      }
-      else{//REVISAR BIEN EL CALCULO DE LAS DISTANCIAS.........................
-        if(get<1>(distancias[usuario]) > distancia){
-          numIteracion[(get<0>(distancias[usuario]))]--;
-          numIteracion[tCentroides.first]++;
-          distancias[usuario] = make_tuple(tCentroides.first, distancia);
+  double distancia, normaCentro = 0, error = 1;
+  while(error > 0.5){
+    for(const auto tCentroides : centroides){
+      normaCentro = normaCentroide(tCentroides.second);
+      for(const auto& tDatos : datos){
+        for(size_t i = 0; i < tDatos.second.size(); i++){
+            j = get<0>(tDatos.second[i]);
+            productoPunto += get<1>(tDatos.second[i]) * get<1>(tCentroides.second[j-1]);
         }
+        usuario = tDatos.first;
+        distancia = acos(productoPunto/(normas[usuario] * normaCentro));//PREGUNTAR SI ES EN RAD O EN DEG
+        mejorDistancia = distancias[usuario];
+        if(get<1>(mejorDistancia) == -1){
+          distancias[usuario] = make_tuple(tCentroides.first, distancia);
+          numIteracion[tCentroides.first]++;
+        }
+        else{//REVISAR BIEN EL CALCULO DE LAS DISTANCIAS.........................
+          if(get<1>(distancias[usuario]) > distancia){
+            numIteracion[(get<0>(distancias[usuario]))]--;
+            numIteracion[tCentroides.first]++;
+            distancias[usuario] = make_tuple(tCentroides.first, distancia);
+          }
+        }
+        distancia = 0;
+        productoPunto = 0;
       }
-      distancia = 0;
-      productoPunto = 0;
     }
+    error = calcula_promedio(datos, centroides, distancias, numIteracion);
   }
-  calcula_promedio(datos, centroides, distancias, numIteracion);
 }
 
 void generarCentroide(tabla &centroides, size_t numCentroides){
@@ -131,7 +143,7 @@ void generarCentroide(tabla &centroides, size_t numCentroides){
 
 void lecturaArchivo(tabla &datos, tablaDistacias &distancias){
   //ifstream archivo("netflix/combined_data_1.txt");
-  ifstream archivo("netflix/prueba.txt");
+  ifstream archivo("netflix/combined_data_1.txt");
   char linea[256];
   string line;
   vectorTupla argumentos;
