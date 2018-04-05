@@ -16,16 +16,16 @@ typedef unordered_map<size_t, vectorTupla> tabla;
 typedef unordered_map<size_t, double> tablaNorma;
 typedef unordered_map<size_t, tuple<double, double>> tablaDistacias;
 
-void calculoNormas(tabla &norma, tablaNorma &normas){
+void calculoNormas(vector<vectorTupla> &vectorVectores, tablaNorma &normas){
   double calculo = 0;
-  for(const auto& n : norma)
+  for(int j = 0; j < vectorVectores.size(); j++)
   {
-    for(int i = 0; i < n.second.size(); i++)
+    for(int i = 0; i < vectorVectores[j].size(); i++)
     {
-      calculo += pow(get<1>(n.second[i]), 2);
+      calculo += pow(get<1>(vectorVectores[j][i]), 2);
     }
     calculo = sqrt(calculo);
-    normas.insert({n.first, calculo});
+    normas.insert({j, calculo});
     calculo = 0;
   }
 }
@@ -40,11 +40,10 @@ double normaCentroide(vectorTupla centroide){
   return calculo;
 }
 
-void generarDatosCero(vectorTupla &calculoCentroide, vector<size_t> &cont){
+void generarDatosCero(vectorTupla &calculoCentroide){
 	for(size_t i = 1; i <= 17770; i++)
 	{
 		calculoCentroide.push_back(make_tuple(i,0));
-    cont[i-1] = 0;
 	}
 
 }
@@ -59,73 +58,82 @@ double calculoError(vectorTupla calculoCentroide, vectorTupla centroide){///////
   return sqrt(error);
 }
 
-double calcula_promedio(tabla &datos, tabla &centroides, tablaDistacias &distancias, vector<size_t> &numIteracion){
+
+double calculaPromedio(vector<vectorTupla> &vectorVectores, vectorTupla &Centroide, tablaDistacias &distancias, double idCentroide){
 	vectorTupla calculoCentroide;
-  	vector<size_t> cont(17770);
-	double x = 0.0, error = 0.0;
-	for(const auto recorreCentroide: centroides)
-	{
-		generarDatosCero(calculoCentroide, cont);
-		for(const auto recorreDistancia: distancias)
-		{
-			if(get<0>(recorreDistancia.second) == recorreCentroide.first)
-			{
-				vectorTupla datos_usuario = datos[recorreDistancia.first];
-				for(size_t i = 0; i < datos_usuario.size(); i++)
-				{
-					get<1>(calculoCentroide[(get<0>(datos_usuario[i]))-1]) += get<1>(datos_usuario[i]);
-          			cont[(get<0>(datos_usuario[i]))-1]++;
-				}
+	vector<size_t> cont(17770,0);
+	generarDatosCero(calculoCentroide);
+	double error = 0.0;
+	//este for recorre las mejores distancias que tenga asignado el centroide
+	for(const auto recorreDistancia: distancias){
+		if(get<0>(recorreDistancia.second) == idCentroide){
+			vectorTupla datos_usuario = vectorVectores[recorreDistancia.first];
+			for(size_t i = 0; i < datos_usuario.size(); i++){
+				get<1>(calculoCentroide[(get<0>(datos_usuario[i]))-1]) += get<1>(datos_usuario[i]);
+          		cont[(get<0>(datos_usuario[i]))-1]++;
 			}
 		}
-    //cout << "centroide: " << recorreCentroide.first << endl;
-    for(int i = 0; i < calculoCentroide.size(); i++){
+	}
+	for(int i = 0; i < calculoCentroide.size(); i++){
       if(cont[i] != 0){
         //cout << get<1>(calculoCentroide[i]) << "/" << cont[i] << endl;
         get<1>(calculoCentroide[i]) = ceil(get<1>(calculoCentroide[i]) / cont[i]);
       }
     }
-    error += calculoError(calculoCentroide, recorreCentroide.second);
-    centroides[recorreCentroide.first] = calculoCentroide;
-    calculoCentroide.clear();
-	//aca va el error esa es la idea
-	}
-  cout << "El error completo es: " << error << endl;
-  return error;
+
+    error = calculoError(calculoCentroide, Centroide);
+    //PREGUNTAR A GUSTAVO QUE ES MENOS COSTOSO PASAR LA TABLA O RETORNAR DOS VALORES
+    Centroide = calculoCentroide;
+    return error;
+
 }
 
-void means(tabla &datos, tabla &centroides, tablaNorma &normas, tablaDistacias &distancias, size_t numCentroides){
-  size_t j, productoPunto = 0, usuario = 0;
-  tuple<double, double> mejorDistancia;
-  vector<size_t> numIteracion(numCentroides, 0);
-  double distancia, normaCentro = 0, error = 1;
+
+tuple<double, double> distanciasMeans(vectorTupla &usuario, tabla &centroides, double &normaUsuario, vector<double> &normaCentorides){
+	//for  que recorre los centroides para realizar  el producto punto
+	size_t j = 0, productoPunto = 0;
+	double distancia = 0.0;
+	tuple<double, double> mejorDistancia = make_tuple(-1,-1);
+	for(const auto tCentroides : centroides){
+		//recorre las peliculas del usuario para realizar el producto punto
+		for(int i = 0; i < usuario.size(); i++){
+			j = get<0>(usuario[i]);
+			productoPunto += get<1>(usuario[i]) * get<1>(tCentroides.second[j-1]);
+		}
+		distancia = acos(productoPunto/(normaUsuario * normaCentorides[tCentroides.first]));
+		if(get<1>(mejorDistancia) == -1){
+			mejorDistancia = make_tuple(tCentroides.first,distancia);
+		}
+		else{
+			if(get<1>(mejorDistancia) > distancia){
+				mejorDistancia = make_tuple(tCentroides.first,distancia);
+			}
+		}
+	}
+	return mejorDistancia;
+
+}
+
+void means(vector<vectorTupla> &vectorVectores, tabla &centroides, tablaNorma &normas, tablaDistacias &distancias, size_t numCentroides){
+  double error = 1;
+  vector<double>  normaCentorides(numCentroides,0.0);
+  tuple<double,double> distancia;
   while(error > 0.5){
-    for(const auto tCentroides : centroides){
-      normaCentro = normaCentroide(tCentroides.second);
-      for(const auto& tDatos : datos){
-        for(size_t i = 0; i < tDatos.second.size(); i++){
-            j = get<0>(tDatos.second[i]);
-            productoPunto += get<1>(tDatos.second[i]) * get<1>(tCentroides.second[j-1]);
-        }
-        usuario = tDatos.first;
-        distancia = acos(productoPunto/(normas[usuario] * normaCentro));//PREGUNTAR SI ES EN RAD O EN DEG
-        mejorDistancia = distancias[usuario];
-        if(get<1>(mejorDistancia) == -1){
-          distancias[usuario] = make_tuple(tCentroides.first, distancia);
-          numIteracion[tCentroides.first]++;
-        }
-        else{//REVISAR BIEN EL CALCULO DE LAS DISTANCIAS.........................
-          if(get<1>(distancias[usuario]) > distancia){
-            numIteracion[(get<0>(distancias[usuario]))]--;
-            numIteracion[tCentroides.first]++;
-            distancias[usuario] = make_tuple(tCentroides.first, distancia);
-          }
-        }
-        distancia = 0;
-        productoPunto = 0;
-      }
-    }
-    error = calcula_promedio(datos, centroides, distancias, numIteracion);
+  	error = 0;
+  	//for que calcula la norma de centroides
+  	for(const auto tCentroides : centroides){
+  		normaCentorides[tCentroides.first] = normaCentroide(tCentroides.second);
+  	}
+  	//for que calcula las distancias iterando sobre cada usuario
+  	for(int i = 0;  i < vectorVectores.size(); i++){
+  		distancia = distanciasMeans(vectorVectores[i],centroides,normas[i],normaCentorides);
+  		distancias[i] = distancia; 
+  	}
+  	for(int i = 0; i < numCentroides; i++){
+  		//como es una suma no hay problemas con la condicion de carrera
+  		error += calculaPromedio(vectorVectores,centroides[i],distancias,i);
+  	}
+  	cout << "Erro Total: "<<error<<endl;
   }
 }
 
@@ -144,7 +152,7 @@ void generarCentroide(tabla &centroides, size_t numCentroides){
 
 void lecturaArchivo(unordered_map<size_t, size_t> &datos, tablaDistacias &distancias, vector<vectorTupla> &vectorVectores){
   //ifstream archivo("netflix/combined_data_1.txt");
-  ifstream archivo("netflix/prueba.txt");
+  ifstream archivo("netflix/combined_data_1.txt");
   char linea[256];
   string line;
   vectorTupla argumentos;
@@ -187,7 +195,7 @@ void lecturaArchivo(unordered_map<size_t, size_t> &datos, tablaDistacias &distan
               argumentos.push_back(make_tuple(idPelicula, calificacion));
               vectorVectores.push_back(argumentos);
               datos.insert({key, (vectorVectores.size() - 1)});
-              distancias.insert({key, make_tuple(-1, -1)});
+              distancias.insert({(vectorVectores.size() - 1), make_tuple(-1, -1)});
               //keys.push_back(key);
               argumentos.clear();
             }
@@ -210,7 +218,7 @@ int main(){
   tablaNorma normas;
   lecturaArchivo(datos, distancias, vectorVectores);
   cout << "Datos cargados..." << endl;
-  //calculoNormas(datos, normas);
+  calculoNormas(vectorVectores, normas);
   cout << "Normas calculadas..." << endl;
   cout << "ingrese el número de centroides: ";
   cin >> numCentroides;
@@ -223,7 +231,7 @@ int main(){
   	}
   }*/
   Timer t;
-  //means(datos, centroides, normas, distancias, numCentroides);
+  means(vectorVectores, centroides, normas, distancias, numCentroides);
   cout << "tiempo: " << t.elapsed() << endl;
   /*for(const auto& n : distancias ) {
         cout << "usuario:[" << n.first << "] centroide:[" << get<0>(n.second) << "] distancia:[" << get<1>(n.second) << "]\n";
