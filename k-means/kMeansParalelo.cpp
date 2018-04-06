@@ -126,10 +126,12 @@ void means(vector<vectorTupla> &vectorVectores, tabla &centroides, tablaNorma &n
   		normaCentorides[tCentroides.first] = normaCentroide(tCentroides.second);
   	}
   	//for que calcula las distancias iterando sobre cada usuario
+    #pragma omp parallel for
   	for(int i = 0;  i < vectorVectores.size(); i++){
   		distancia = distanciasMeans(vectorVectores[i],centroides,normas[i],normaCentorides);
   		distancias[i] = distancia;
   	}
+    #pragma omp parallel for
   	for(int i = 0; i < numCentroides; i++){
   		//como es una suma no hay problemas con la condicion de carrera
   		error += calculaPromedio(vectorVectores,centroides[i],distancias,i);
@@ -232,9 +234,9 @@ int main(){
   		cout<<"Vector["<<i<<"] = "<<get<1>(vectorVectores[i][j])<<endl;
   	}
   }*/
-  Timer t;
+  //Timer t;
   means(vectorVectores, centroides, normas, distancias, numCentroides);
-  cout << "tiempo: " << t.elapsed() << endl;
+  //cout << "tiempo: " << t.elapsed() << endl;
   /*for(const auto& n : distancias ) {
         cout << "usuario:[" << n.first << "] centroide:[" << get<0>(n.second) << "] distancia:[" << get<1>(n.second) << "]\n";
    }*/
