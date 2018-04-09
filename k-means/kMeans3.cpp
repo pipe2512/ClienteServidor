@@ -70,7 +70,7 @@ double calculaPromedio(vector<vectorTupla> &vectorVectores, vectorTupla &Centroi
 			vectorTupla datos_usuario = vectorVectores[recorreDistancia.first];
 			for(size_t i = 0; i < datos_usuario.size(); i++){
 				get<1>(calculoCentroide[(get<0>(datos_usuario[i]))-1]) += get<1>(datos_usuario[i]);
-          		cont[(get<0>(datos_usuario[i]))-1]++;
+        cont[(get<0>(datos_usuario[i]))-1]++;
 			}
 		}
 	}
@@ -136,7 +136,13 @@ void distanciasMeans(tablaDistacias &distancias, vector<vectorTupla> &usuario, v
       }
     }
     productoPunto = 0;
-    distancia = 0.0;
+  }
+}
+
+void reseteaDistancia(tablaDistacias &distancias){
+  for(int i = 0; i < distancias.size(); i++)
+  {
+    distancias[i] = make_tuple(-1,-1);
   }
 }
 
@@ -169,6 +175,7 @@ void means(vector<vectorTupla> &vectorVectores, vector<vectorTupla> &centroides,
   		error += calculaPromedio(vectorVectores,centroides[i],distancias,i);
   	}
   	cout << "Erro Total: "<<error<<endl;
+    reseteaDistancia(distancias);
   }
 }
 
