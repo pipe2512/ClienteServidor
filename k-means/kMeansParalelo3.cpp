@@ -188,12 +188,13 @@ void means(vector<vectorTupla> &vectorVectores, vector<vectorTupla> &centroides,
   	}*/
 
     //for que calcula las distancias iterando sobre cada centroide
+    #pragma omp parallel for
     for(int i = 0; i < centroides.size(); i++)
     {
       normaCentorides[i] = normaCentroide(centroides[i]);
       distanciasMeans(distancias,vectorVectores,centroides[i],normas,normaCentorides[i],i);
     }
-    cout << "tiempo: " << t.elapsed() << endl;
+    #pragma omp parallel for
   	for(int i = 0; i < centroides.size(); i++){
   		//como es una suma no hay problemas con la condicion de carrera
   		error += calculaPromedio(vectorVectores,centroides[i],distancias,i,normaCentorides[i]);
@@ -203,6 +204,7 @@ void means(vector<vectorTupla> &vectorVectores, vector<vectorTupla> &centroides,
     }
     else{
       errorDiferencia = abs(error - errorAnterior);
+      cout << "diferencia: " << errorDiferencia << endl;
       if(errorDiferencia < 0.087){
         cont++;
       }
@@ -212,7 +214,7 @@ void means(vector<vectorTupla> &vectorVectores, vector<vectorTupla> &centroides,
       errorAnterior = error;
     }
   	cout << "Error Total: "<<error<<endl;
-    cout << "diferencia: " << errorDiferencia << endl;
+    cout << "tiempo: " << t.elapsed() << endl;
   }
 }
 
