@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <random>
 #include <math.h>
+#include <limits> 
 #include "timer.hh"
 
 using namespace std;
@@ -47,7 +48,22 @@ void generarDatosCero(vectorTupla &calculoCentroide){
 	}
 }
 
-double calculoError(vectorTupla &calculoCentroide, vectorTupla &centroide, double normaCentorides, tablaDistacias &distancias, vector<vectorTupla> &vectorVectores, double actual){
+void verifica(vectorTupla &calculoCentroide, tablaDistacias &distancias, vector<vectorTupla> &vectorVectores, double actual){
+  double normaCalculoCentroide = normaCentroide(calculoCentroide);
+  if(normaCalculoCentroide == 0)
+  {
+    random_device rd;
+    uniform_int_distribution<int> dist(0, distancias.size());
+    int indice = dist(rd);
+    for(int i = 0; i < vectorVectores[indice].size(); i++)
+    {
+      int indicePelicula = get<0>(vectorVectores[indice][i]);
+      get<1>(calculoCentroide[indicePelicula-1]) = get<1>(vectorVectores[indice][i]);
+    }
+    get<0>(distancias[indice]) = actual;
+  }
+}
+/*double calculoError(vectorTupla &calculoCentroide, vectorTupla &centroide, double normaCentorides, tablaDistacias &distancias, vector<vectorTupla> &vectorVectores, double actual){
   double error = 0.0;
   double productoPunto  = 0.0;
   double normaCalculoCentroide = normaCentroide(calculoCentroide);
@@ -74,8 +90,24 @@ double calculoError(vectorTupla &calculoCentroide, vectorTupla &centroide, doubl
   //cout << "Print" << error <<endl;
   /*if(error <= 0.087){
     error = 0;
-  }*/
+  }
   //cout << " = " << error << endl;
+  return error;
+}*/
+
+double calculoError(tablaDistacias &distancias, size_t numCentroides){
+  double error = 0.0;
+  vector<double> grupos(numCentroides,0);
+  vector<double> sumas(numCentroides,0);
+  for(const auto recorreDistancia: distancias){
+    grupos[get<0>(recorreDistancia.second)] += 1; 
+    sumas[get<0>(recorreDistancia.second)] += get<1>(recorreDistancia.second);
+  }
+
+  for(int i = 0; i < grupos.size(); i++)
+  {
+    error += (sumas[i]/grupos[i]);
+  }
   return error;
 }
 
@@ -102,9 +134,10 @@ double calculaPromedio(vector<vectorTupla> &vectorVectores, vectorTupla &Centroi
       }
     }
 
-    error = calculoError(calculoCentroide, Centroide, normaCentorides, distancias, vectorVectores, idCentroide);
+    //error = calculoError(calculoCentroide, Centroide, normaCentorides, distancias, vectorVectores, idCentroide);
+    verifica(calculoCentroide,distancias,vectorVectores,idCentroide);
     Centroide = calculoCentroide;
-    return error;
+    //return error;
 
 }
 
@@ -138,7 +171,7 @@ double calculaPromedio(vector<vectorTupla> &vectorVectores, vectorTupla &Centroi
 void distanciasMeans(tablaDistacias &distancias, vector<vectorTupla> &usuario, vectorTupla &centroide_iterado, tablaNorma &normaUsuario, double &normaCentorides, int &centroide_actual){
   size_t m = 0, productoPunto = 0;
   double distancia = 0.0;
-  //tuple<double, double> mejorDistancia = make_tuple(-1,-1);
+  #pragma omp parallel for reduction(min:distancia) //no se tengo dudas
   for(int i = 0; i < usuario.size(); i++)
   {
     for(int j = 0; j < usuario[i].size(); j++)
@@ -147,35 +180,32 @@ void distanciasMeans(tablaDistacias &distancias, vector<vectorTupla> &usuario, v
       productoPunto += get<1>(usuario[i][j]) * get<1>(centroide_iterado[m-1]);
     }
     distancia = acos(productoPunto/sqrt(normaUsuario[i] * normaCentorides));
-    if(get<1>(distancias[i]) == -1){
+    if(get<1>(distancias[i]) > distancia){
       distancias[i] = make_tuple(centroide_actual,distancia);
-    }
-    else{
-      if(get<1>(distancias[i]) > distancia){
-        distancias[i] = make_tuple(centroide_actual,distancia);
-      }
     }
     productoPunto = 0;
   }
 }
 
 void reseteaDistancia(tablaDistacias &distancias){
+  double maximo = numeric_limits<int>::max();
   for(int i = 0; i < distancias.size(); i++)
   {
-    distancias[i] = make_tuple(-1,-1);
+    distancias[i] = make_tuple(-1,maximo);
   }
 }
 
 void means(vector<vectorTupla> &vectorVectores, vector<vectorTupla> &centroides, tablaNorma &normas, tablaDistacias &distancias, size_t numCentroides){
-  double error = 1;
+  double error = 0.0;
   vector<double>  normaCentorides(numCentroides, 0);
   tuple<double,double> distancia;
-  double errorAnterior = -1;
-  double errorDiferencia = 0.0;
+  double errorAnterior = 0.0;
+  double salida = 1.0;
   int cont = 0;
-  while(cont < 2){
+  while(salida > 0.01){
     Timer t;
-  	error = 0;
+    errorAnterior = error;
+    error = 0.0;
     reseteaDistancia(distancias);
   	//for que calcula la norma de centroides
   	/*for(int i = 0; i < centroides.size(); i++){
@@ -197,28 +227,17 @@ void means(vector<vectorTupla> &vectorVectores, vector<vectorTupla> &centroides,
     #pragma omp parallel for
   	for(int i = 0; i < centroides.size(); i++){
   		//como es una suma no hay problemas con la condicion de carrera
-  		error += calculaPromedio(vectorVectores,centroides[i],distancias,i,normaCentorides[i]);
+  		calculaPromedio(vectorVectores,centroides[i],distancias,i,normaCentorides[i]);
   	}
-    if(errorAnterior == -1){
-      errorAnterior = error;
-    }
-    else{
-      errorDiferencia = abs(error - errorAnterior);
-      cout << "diferencia: " << errorDiferencia << endl;
-      if(errorDiferencia < 0.087){
-        cont++;
-      }
-      else{
-        cont = 0;
-      }
-      errorAnterior = error;
-    }
-  	cout << "Error Total: "<<error<<endl;
-    cout << "tiempo: " << t.elapsed() << endl;
+    
+    error = calculoError(distancias,numCentroides);
+    salida = abs(error - errorAnterior);
+    cout << "Diferencia: "<<salida<<endl;
+    cout << "Tiempo iteracion: " << t << endl;
   }
 }
 
-void generarCentroide(vector<vectorTupla> &centroides, size_t numCentroides){
+/*void generarCentroide(vector<vectorTupla> &centroides, size_t numCentroides){
   random_device rd;
   uniform_int_distribution<int> dist(0, 5);
   vectorTupla calificaciones;
@@ -229,6 +248,21 @@ void generarCentroide(vector<vectorTupla> &centroides, size_t numCentroides){
     centroides.push_back(calificaciones);
     calificaciones.clear();
   }
+}*/
+void generarCentroidePuntos(vector<vectorTupla> &centroides, size_t numCentroides, vector<vectorTupla> &vectorVectores){
+  random_device rd;
+  uniform_int_distribution<int> dist(0, vectorVectores.size() - 1);
+  for(size_t i = 0; i < numCentroides; i++){
+    size_t indice = dist(rd);
+    vectorTupla calificaciones;
+    generarDatosCero(calificaciones);
+    for(size_t j = 0; j < vectorVectores[indice].size(); j++){
+      int indicePelicula = get<0>(vectorVectores[indice][j]);
+      get<1>(calificaciones[indicePelicula-1]) = get<1>(vectorVectores[indice][i]);
+    }
+    centroides.push_back(calificaciones);
+  }
+
 }
 
 void lecturaArchivo(unordered_map<size_t, size_t> &datos, tablaDistacias &distancias, vector<vectorTupla> &vectorVectores){
@@ -276,7 +310,8 @@ void lecturaArchivo(unordered_map<size_t, size_t> &datos, tablaDistacias &distan
               argumentos.push_back(make_tuple(idPelicula, calificacion));
               vectorVectores.push_back(argumentos);
               datos.insert({key, (vectorVectores.size() - 1)});
-              distancias.insert({(vectorVectores.size() - 1), make_tuple(-1, -1)});
+              double maximo = numeric_limits<int>::max();
+              distancias.insert({(vectorVectores.size() - 1), make_tuple(-1, maximo)});
               //keys.push_back(key);
               argumentos.clear();
             }
@@ -303,7 +338,7 @@ int main(){
   cout << "Normas calculadas..." << endl;
   cout << "ingrese el número de centroides: ";
   cin >> numCentroides;
-  generarCentroide(centroides, numCentroides);
+  generarCentroidePuntos(centroides, numCentroides, vectorVectores);
   /*for(int i = 0; i < vectorVectores.size(); i++)
   {
   	for(int j = 0; j < vectorVectores[i].size(); j++)
@@ -311,9 +346,9 @@ int main(){
   		cout<<"Vector["<<i<<"] = "<<get<1>(vectorVectores[i][j])<<endl;
   	}
   }*/
-  //Timer t;
+  Timer t;
   means(vectorVectores, centroides, normas, distancias, numCentroides);
-  //cout << "tiempo: " << t.elapsed() << endl;
+  cout << "tiempo: " << t.elapsed() << endl;
   /*for(const auto& n : distancias ) {
         cout << "usuario:[" << n.first << "] centroide:[" << get<0>(n.second) << "] distancia:[" << get<1>(n.second) << "]\n";
    }*/
