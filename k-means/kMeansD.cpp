@@ -204,30 +204,55 @@ void vectorK(vectorTupla &indiceK,size_t numCentroides,double sumaDistancias){
     int Iarriba = indiceK.size();
     int Iabajo = 0;
     int Icentro;
+    int indice;
     while(Iabajo <= Iarriba){
       //cout << "comparacion del while: " << Iabajo << " <= " << Iarriba << endl;
-      Icentro = (Iarriba + Iabajo)/2;
-      cout << "comparacion salida: " << Iabajo << " - " << Iarriba << endl;
+      Icentro = ceil((Iarriba + Iabajo)/2);
+      cout << "comparacion salida: " << Iarriba << " - " << Iabajo << endl;
       if(abs(Iarriba - Iabajo) == 1 or abs(Iarriba - Iabajo) == 0){
-        if(get<0>(indiceK[Iarriba]) > numCentroides){
-          if(Iarriba == 0){
-            cout << "guardandose en la posicion: " << Iarriba << endl;
+        if(abs(Iarriba - Iabajo) == 0){
+          indice = Iarriba;
+        }
+        else{
+          indice = Iarriba-1;
+        }
+        cout << "comparacion asignacion: " << get<0>(indiceK[indice]) << " > " << numCentroides << endl;
+        if(get<0>(indiceK[indice]) > numCentroides){
+          cout << "este es el indice: " << indice << endl;
+          if(indice == 0){
+            cout << "guardandose en la posicion: " << "la cero" << endl;
             indiceK.insert(indiceK.begin(), make_tuple(numCentroides,sumaDistancias));
           }
           else{
-            cout << "guardandose en la posicion: " << Iarriba-1 << endl;
-            indiceK.insert(indiceK.begin()+(Iarriba-1), make_tuple(numCentroides,sumaDistancias));
+            cout << "guardandose en la posicion: " << Iabajo << endl;
+            indiceK.insert(indiceK.begin()+(indice), make_tuple(numCentroides,sumaDistancias));
           }
-          break;  
+          break;
         }
         else{
-          if((Iarriba+1) < indiceK.size()){
-            cout << "guardandose en la posicion: " << Iarriba-1 << endl;
-            indiceK.insert(indiceK.begin()+(Iarriba+1), make_tuple(numCentroides,sumaDistancias));   
+          if(abs(Iarriba - Iabajo) == 1){
+            if((indice+1) < indiceK.size()){
+                if(get<0>(indiceK[indice+1]) <= numCentroides){
+                  indice = indice+2;
+                }else{
+                  indice = indice+1;
+                }
+            }
           }else{
-            cout << "guardandose en la posicion: " << "en la ultima" << endl;
-            indiceK.push_back(make_tuple(numCentroides,sumaDistancias));
+            indice = Iarriba+1;
+          //   cout << "guardandose en la posicion: " << "la cero..." << endl;
+          //   indiceK.insert(indiceK.begin(), make_tuple(numCentroides,sumaDistancias));
           }
+          //else{
+          cout << "este es el indice: " << indice << endl;
+            if((Iarriba+1) < indiceK.size()){
+              cout << "guardandose en la posicion....: " << indice << endl;
+              indiceK.insert(indiceK.begin()+(indice), make_tuple(numCentroides,sumaDistancias));
+            }else{
+              cout << "guardandose en la posicion: " << "en la ultima" << endl;
+              indiceK.push_back(make_tuple(numCentroides,sumaDistancias));
+            }
+          //}
           break;
         }
       }
@@ -237,14 +262,14 @@ void vectorK(vectorTupla &indiceK,size_t numCentroides,double sumaDistancias){
         }
         else{
           Iabajo = Icentro+1;
-        }       
+        }
       }
     }
   }
 }
 
 void calculaK(size_t limiteK, vector<vectorTupla> &vectorVectores,tablaDistacias &distancias,tablaNorma &normas){
-    vector<vectorTupla> centroides; 
+    vector<vectorTupla> centroides;
     priority_queue<tuple<double,size_t>> colaPrioridad;
     colaPrioridad.push(make_tuple(numeric_limits<int>::max(),1));
     colaPrioridad.push(make_tuple(numeric_limits<int>::max(),limiteK));
@@ -337,7 +362,7 @@ int main(){
     vectorK(indiceK,k,11111);
     cout << "[ ";
     for(int j = 0; j < indiceK.size(); j++){
-      cout << get<0>(indiceK[j]) << ", ";
+      cout << ", " << get<0>(indiceK[j]);
     }
     cout << " ]" << endl;
   }
