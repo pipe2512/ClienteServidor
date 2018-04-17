@@ -8,6 +8,7 @@
 #include <random>
 #include <math.h>
 #include <limits>
+#include <queue>
 #include "timer.hh"
 
 using namespace std;
@@ -101,8 +102,8 @@ double calculaPromedio(vector<vectorTupla> &vectorVectores, vectorTupla &Centroi
 			for(size_t i = 0; i < datos_usuario.size(); i++){
 				get<1>(calculoCentroide[(get<0>(datos_usuario[i]))-1]) += get<1>(datos_usuario[i]);
         //cont[(get<0>(datos_usuario[i]))-1]++;
-        cont += 1;
 			}
+      cont += 1;
 		}
 	}
 	for(int i = 0; i < calculoCentroide.size(); i++){
@@ -195,6 +196,76 @@ void generarCentroidePuntos(vector<vectorTupla> &centroides, size_t numCentroide
 
 }
 
+void vectorK(vectorTupla &indiceK,size_t numCentroides,double sumaDistancias){
+  if(indiceK.size() < 1){
+    indiceK.push_back(make_tuple(numCentroides,sumaDistancias));
+  }
+  else{
+    int Iarriba = indiceK.size();
+    int Iabajo = 0;
+    int Icentro;
+    while(Iabajo <= Iarriba){
+      //cout << "comparacion del while: " << Iabajo << " <= " << Iarriba << endl;
+      Icentro = (Iarriba + Iabajo)/2;
+      cout << "comparacion salida: " << Iabajo << " - " << Iarriba << endl;
+      if(abs(Iarriba - Iabajo) == 1 or abs(Iarriba - Iabajo) == 0){
+        if(get<0>(indiceK[Iarriba]) > numCentroides){
+          if(Iarriba == 0){
+            cout << "guardandose en la posicion: " << Iarriba << endl;
+            indiceK.insert(indiceK.begin(), make_tuple(numCentroides,sumaDistancias));
+          }
+          else{
+            cout << "guardandose en la posicion: " << Iarriba-1 << endl;
+            indiceK.insert(indiceK.begin()+(Iarriba-1), make_tuple(numCentroides,sumaDistancias));
+          }
+          break;  
+        }
+        else{
+          if((Iarriba+1) < indiceK.size()){
+            cout << "guardandose en la posicion: " << Iarriba-1 << endl;
+            indiceK.insert(indiceK.begin()+(Iarriba+1), make_tuple(numCentroides,sumaDistancias));   
+          }else{
+            cout << "guardandose en la posicion: " << "en la ultima" << endl;
+            indiceK.push_back(make_tuple(numCentroides,sumaDistancias));
+          }
+          break;
+        }
+      }
+      else{
+        if(get<0>(indiceK[Icentro]) > numCentroides){
+          Iarriba = Icentro-1;
+        }
+        else{
+          Iabajo = Icentro+1;
+        }       
+      }
+    }
+  }
+}
+
+void calculaK(size_t limiteK, vector<vectorTupla> &vectorVectores,tablaDistacias &distancias,tablaNorma &normas){
+    vector<vectorTupla> centroides; 
+    priority_queue<tuple<double,size_t>> colaPrioridad;
+    colaPrioridad.push(make_tuple(numeric_limits<int>::max(),1));
+    colaPrioridad.push(make_tuple(numeric_limits<int>::max(),limiteK));
+    colaPrioridad.push(make_tuple(numeric_limits<int>::max(),ceil(limiteK/2)));
+    size_t numCentroides = 0;
+    vectorTupla indiceK;
+    while(colaPrioridad.size() > 0)
+    {
+      numCentroides = get<1>(colaPrioridad.top());
+      colaPrioridad.pop();
+      generarCentroidePuntos(centroides, numCentroides, vectorVectores);
+      double sumaDistancias = 0;
+      //Timer t;
+      sumaDistancias = means(vectorVectores, centroides, normas, distancias, numCentroides);
+      /*cout << sumaDistancias << endl;
+      cout << "tiempo: " << t.elapsed() << endl;*/
+      centroides.clear();
+    }
+}
+
+
 //Funcion donde se lee el archivo y se crean de manera inicial los datos para trabajar
 void lecturaArchivo(unordered_map<size_t, size_t> &datos, tablaDistacias &distancias, vector<vectorTupla> &vectorVectores){
   ifstream archivo("netflix/combined_data_1.txt");
@@ -245,8 +316,7 @@ void lecturaArchivo(unordered_map<size_t, size_t> &datos, tablaDistacias &distan
 
 //Funcion principal encargada de ejecutar cada coshita
 int main(){
-  unordered_map<size_t, size_t> datos;
-  vector<vectorTupla> centroides;
+  /*unordered_map<size_t, size_t> datos;
   tablaDistacias distancias;
   size_t numCentroides = 0;
   vector<vectorTupla> vectorVectores;
@@ -255,15 +325,22 @@ int main(){
   cout << "Datos cargados..." << endl;
   calculoNormas(vectorVectores, normas);
   cout << "Normas calculadas..." << endl;
-  while(true){
-    cout << "ingrese el número de centroides: ";
-    cin >> numCentroides;
-    generarCentroidePuntos(centroides, numCentroides, vectorVectores);
-    double sumaDistancias = 0;
-    Timer t;
-    sumaDistancias = means(vectorVectores, centroides, normas, distancias, numCentroides);
-    cout << sumaDistancias << endl;
-    cout << "tiempo: " << t.elapsed() << endl;
-    centroides.clear();
+  cout << "limite de k: ";
+  size_t limiteK = 0;
+  cin >> limiteK;*/
+  random_device rd;
+  uniform_int_distribution<int> dist(0, 100);
+  vectorTupla indiceK;
+  for(int i = 0; i < 10; i++){
+    size_t k = dist(rd);
+    cout << "la K que se envia: " << k << endl;
+    vectorK(indiceK,k,11111);
+    cout << "[ ";
+    for(int j = 0; j < indiceK.size(); j++){
+      cout << get<0>(indiceK[j]) << ", ";
+    }
+    cout << " ]" << endl;
   }
+
+  //calculaK(limiteK,vectorVectores,distancias,normas);
 }
