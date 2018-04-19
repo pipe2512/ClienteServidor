@@ -269,6 +269,7 @@ void vectorK(vectorTupla &indiceK,size_t numCentroides,double sumaDistancias, do
   }
 }
 
+
 void calculaK(size_t limiteK, vector<vectorTupla> &vectorVectores,tablaDistacias &distancias,tablaNorma &normas){
     vector<vectorTupla> centroides;
     priority_queue<tuple<double,size_t>> colaPrioridad;
@@ -276,9 +277,11 @@ void calculaK(size_t limiteK, vector<vectorTupla> &vectorVectores,tablaDistacias
     colaPrioridad.push(make_tuple(numeric_limits<int>::max(),limiteK));
     colaPrioridad.push(make_tuple(numeric_limits<int>::max()-1,ceil(limiteK/2)));
     size_t numCentroides = 0;
-    double  kSiguiente, kAnterior, kActual, pPendiente, sPendiente;
+    double  kSiguiente, kAnterior, kActual, kActualAnterior, kAnteriorAnterior, kSiguienteAnterior, pPendiente, sPendiente;
+    double cont = 0.0, anguloAnterior = 0.0, anguloSiguiente = 0.0, anguloPrioridad = 0.0;
+    bool entrada = false, parada = false;
     vectorTupla indiceK;
-    while(colaPrioridad.size() > 0)
+    while(colaPrioridad.size() > 0 && parada == false)
     {
       numCentroides = get<1>(colaPrioridad.top());
       colaPrioridad.pop();
@@ -288,27 +291,61 @@ void calculaK(size_t limiteK, vector<vectorTupla> &vectorVectores,tablaDistacias
       sumaDistancias = means(vectorVectores, centroides, normas, distancias, numCentroides);
       vectorK(indiceK,numCentroides,sumaDistancias, kAnterior, kSiguiente, kActual);
 
-        cout << "la K que se envia: " << numCentroides << endl;
-        for(int j = 0; j < indiceK.size(); j++){
-          cout << "[ " << get<0>(indiceK[j]) << ", " << get<1>(indiceK[j]) << " ]";
-        }
-        cout  << endl;
-        if(kAnterior > -1){
-            diferenciaPendiente = 0.0;
-            cout << "entre al anterior" << endl;
-            pPendiente = (get<1>(indiceK[kAnterior]) - get<1>(indiceK[kActual]))/(get<0>(indiceK[kAnterior]) - get<0>(indiceK[kActual]));
-        }
-        if(kSiguiente < indiceK.size() and kSiguiente > -1){
-            diferenciaPendiente = 0.0;
-            cout << "entre al siguiente" << endl;
-            sPendiente = (get<1>(indiceK[kSiguiente]) - get<1>(indiceK[kActual]))/(get<0>(indiceK[kSiguiente]) - get<0>(indiceK[kActual]));
-        }
+      for(int j = 0; j < indiceK.size(); j++){
+        cout << "[ " << get<0>(indiceK[j]) << ", " << get<1>(indiceK[j]) << " ]";
+      }
+      cout  << endl;
+      if(kAnterior > -1){
+          //diferenciaPendiente = 0.0;
+          pPendiente = ((double)get<1>(indiceK[kAnterior]) - (double)get<1>(indiceK[kActual]))/((double)get<0>(indiceK[kAnterior]) - (double)get<0>(indiceK[kActual]));
+      }
+      if(kSiguiente < indiceK.size() and kSiguiente > -1){
+          //diferenciaPendiente = 0.0;
+          sPendiente = ((double)get<1>(indiceK[kActual]) - (double)get<1>(indiceK[kSiguiente]))/((double)get<0>(indiceK[kActual]) - (double)get<0>(indiceK[kSiguiente]));
+      }
 
+      if(cont == 2){
+        anguloSiguiente = abs(atan(pPendiente) - atan(sPendiente));
+        if(get<0>(indiceK[kActual]) == get<0>(indiceK[kActualAnterior])){
+          parada = true;
+        }
+        if(anguloSiguiente < anguloAnterior){
+          kActual = kActualAnterior;
+          kAnterior = kAnteriorAnterior;
+          kSiguiente = kSiguienteAnterior;
+          anguloPrioridad = anguloAnterior;
+        }
+        else{
+          anguloPrioridad = anguloSiguiente;
+        }
+        cout << "El k que se maneja: " << get<0>(indiceK[kActual]) << endl;
+        cout << "mejor angulo: "<< anguloPrioridad <<  " angulo inferior: " << anguloAnterior << " anguloSiguiente: " << anguloSiguiente << endl;
+        cont = 0;
+        entrada = false;
+      }
+
+      if(cont == 1){
+        anguloAnterior = abs(atan(pPendiente) - atan(sPendiente));
+        kActualAnterior = kActual;
+        kAnteriorAnterior = kAnterior;
+        kSiguienteAnterior = kSiguiente;
+        cont++;
+      }
+
+      if(kSiguiente < indiceK.size() and kSiguiente > -1 and kAnterior > -1 and entrada == false){
+        int mitad = ceil(abs(((double)get<0>(indiceK[kActual]) - (double)get<0>(indiceK[kAnterior]))/2));
+        //size_t mitadSiguiente = ceil(abs(kSiguiente-kActual)/2);
+        colaPrioridad.push(make_tuple(anguloPrioridad, (get<0>(indiceK[kActual]) - mitad)));
+        colaPrioridad.push(make_tuple(anguloPrioridad, (get<0>(indiceK[kActual]) + mitad)));
+        entrada = true;
+        cont++;
+      }
 
       /*cout << sumaDistancias << endl;
       cout << "tiempo: " << t.elapsed() << endl;*/
       centroides.clear();
     }
+    cout << "El mejor k es: " << get<0>(indiceK[kActual]) << endl;
 }
 
 
