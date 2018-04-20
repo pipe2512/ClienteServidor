@@ -196,7 +196,7 @@ void generarCentroidePuntos(vector<vectorTupla> &centroides, size_t numCentroide
 
 }
 
-void vectorK(vectorTupla &indiceK,size_t numCentroides,double sumaDistancias, double &kAnterior, double &kSiguiente, double &kActual){
+void vectorK(vectorTupla &indiceK,size_t numCentroides, bool &parada ,double sumaDistancias, double &kAnterior, double &kSiguiente, double &kActual){
   if(indiceK.size() < 1){
     indiceK.push_back(make_tuple(numCentroides,sumaDistancias));
     kAnterior = -1;
@@ -206,15 +206,24 @@ void vectorK(vectorTupla &indiceK,size_t numCentroides,double sumaDistancias, do
   else{
     int Iarriba = indiceK.size();
     int Iabajo = 0;
-    int Icentro,  indice;
+    int Icentro,  indice = 0;
     while(Iabajo <= Iarriba){
       Icentro = ceil((Iarriba + Iabajo)/2);
+      if(get<0>(indiceK[Icentro]) == numCentroides){
+        cout << "la k que se repetia es: " << get<0>(indiceK[Icentro]) << endl; 
+        parada = true;
+        break;
+      }
       if(abs(Iarriba - Iabajo) == 1 or abs(Iarriba - Iabajo) == 0){
         if(abs(Iarriba - Iabajo) == 0){
           indice = Iarriba;
         }
         else{
           indice = Iarriba-1;
+        }
+        if(get<0>(indiceK[indice]) == numCentroides){
+          parada = true;
+          break;
         }
         if(get<0>(indiceK[indice]) > numCentroides){
           if(indice == 0){
@@ -242,6 +251,10 @@ void vectorK(vectorTupla &indiceK,size_t numCentroides,double sumaDistancias, do
             }
           }else{
             indice = Iarriba+1;
+          }
+          if(get<0>(indiceK[indice]) == numCentroides){
+            parada = true;
+            break;
           }
             if((Iarriba+1) < indiceK.size()){
               indiceK.insert(indiceK.begin()+(indice), make_tuple(numCentroides,sumaDistancias));
@@ -289,7 +302,7 @@ void calculaK(size_t limiteK, vector<vectorTupla> &vectorVectores,tablaDistacias
       double sumaDistancias = 0;
       //Timer t;
       sumaDistancias = means(vectorVectores, centroides, normas, distancias, numCentroides);
-      vectorK(indiceK,numCentroides,sumaDistancias, kAnterior, kSiguiente, kActual);
+      vectorK(indiceK,numCentroides,parada,sumaDistancias, kAnterior, kSiguiente, kActual);
 
       for(int j = 0; j < indiceK.size(); j++){
         cout << "[ " << get<0>(indiceK[j]) << ", " << get<1>(indiceK[j]) << " ]";
