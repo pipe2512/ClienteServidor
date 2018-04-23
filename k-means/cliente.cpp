@@ -250,7 +250,7 @@ int main(){
   vector<vectorTupla> centroides;
   tablaDistacias distancias;
   ////////////////////////////////////////////////////
-  string ipserver="localhost";
+  /*string ipserver="localhost";
   context context;
   socket cliente(context,socket_type::req);
 
@@ -259,7 +259,7 @@ int main(){
   const string conexionserver = "tcp://"+ipserver+":4000";
 
 
-  cliente.connect(conexionserver);
+  cliente.connect(conexionserver);*/
 
   vector<vectorTupla> vectorVectores;
   tablaNorma normas;
@@ -267,30 +267,25 @@ int main(){
   cout << "Datos cargados..." << endl;
   calculoNormas(vectorVectores, normas);
   cout << "Normas calculadas..." << endl;
-  string imprimir;
-  string salida_canal = "false";
-  while(salida_canal == "false"){
-    zmqpp:message hola;
-    hola << "hola";
-    cliente.send(hola);
+  context context;
+  socket cliente_recv(context,socket_type::pull);
+  cliente_recv.connect("tcp://localhost:5557");
+  socket cliente_send(context,socket_type::push);
+  cliente_send.connect("tcp://localhost:5558");
+  string x;
+  while(true){
     zmqpp::message msg;
-    cliente.receive(msg);
-    msg >> imprimir;
-    cout<<"K recibido es: "<< atoi(imprimir.c_str()) <<endl;
-
-    size_t numCentroides = atoi(imprimir.c_str());
+    cliente_recv.receive(msg);
+    msg >> x;
+    cout<<"K recibido es: "<< atoi(x.c_str()) <<endl;
+    size_t numCentroides = atoi(x.c_str());
     //cout << "ingrese el número de centroides: ";
     //cin >> numCentroides;
     generarCentroidePuntos(centroides, numCentroides, vectorVectores);
     //Timer t;
-
     zmqpp::message resultado;
     resultado << to_string(means(vectorVectores, centroides, normas, distancias, numCentroides));
     centroides.clear();
-    cliente.send(resultado);
-    zmqpp::message adios;
-    cliente.receive(adios);
-    adios >> salida_canal;
+    cliente_send.send(resultado);
   }
-  //cout << "tiempo: " << t.elapsed() << endl;
 }

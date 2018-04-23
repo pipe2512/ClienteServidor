@@ -104,10 +104,11 @@ void vectorK(vectorTupla &indiceK,size_t numCentroides, bool &parada ,double sum
 
 
 void calculaK(size_t limiteK){
-	context context;
-	socket server(context,socket_type::rep);
-	const string serverconexion = "tcp://*:4000";
-	server.bind(serverconexion);
+  	context context;
+    socket server_send(context,socket_type::push);
+    socket server_recv(context,socket_type::pull);
+    server_send.bind("tcp://*:5557");
+    server_recv.bind("tcp://*:5558");
     vector<vectorTupla> centroides;
     priority_queue<tuple<double,size_t>> colaPrioridad;
     colaPrioridad.push(make_tuple(numeric_limits<int>::max(),1));
@@ -122,24 +123,18 @@ void calculaK(size_t limiteK){
     {
       numCentroides = get<1>(colaPrioridad.top());
       colaPrioridad.pop();
+      string calculo_aleatorio = to_string(numCentroides);
+      zmqpp::message msg;
+      msg << calculo_aleatorio;
+      server_send.send(msg);
       double sumaDistancias = 0;
+      zmqpp::message resultado;
+      server_recv.receive(resultado);
+      string x;
+      resultado >> x;
+      cout << "Respuesta = " << x << endl;
+      sumaDistancias = atoi(x.c_str());
       //Timer t;
-      zmqpp::message hola;
-	  server.receive(hola);
-	  zmqpp::message msg;
-	  string calculo_aleatorio = to_string(numCentroides);
-	  msg << calculo_aleatorio;
-	  cout << "Enviando k = " << calculo_aleatorio << endl;
-	  server.send(msg);
-	  zmqpp::message rev;
-	  server.receive(rev);
-	  string x;
-	  rev >> x;
-	  cout << "Respuesta = " << x << endl;
-	  sumaDistancias = atoi(x.c_str());
-	  zmqpp::message adios;
-	  adios << "false";
-	  server.send(adios);
       vectorK(indiceK,numCentroides,parada,sumaDistancias, kAnterior, kSiguiente, kActual);
 
       /*for(int j = 0; j < indiceK.size(); j++){
@@ -194,7 +189,7 @@ void calculaK(size_t limiteK){
         cont++;
       }
     }
-    server.close();
+    //server.close();
     cout << "El mejor k es: " << get<0>(indiceK[kActual]) << endl;
 }
 
