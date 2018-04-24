@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <tuple>
 #include <vector>
 #include <cstdlib>
@@ -35,13 +35,13 @@ void vectorK(vectorTupla &indiceK,size_t numCentroides, bool &encontrado ,double
       //se halla el centro entre el limite superior e inferior
       Icentro = ceil((Iarriba + Iabajo)/2);
       //se compara que el kActual que se esta examinando no se encuentre otra vez condishion de parada
-      if(get<0>(indiceK[Icentro]) == numCentroides){
+      /*if(get<0>(indiceK[Icentro]) == numCentroides){
         encontrado = true;
         kAnterior = Icentro-1;
         kSiguiente = Icentro+1;
         kActual = Icentro;
         break;
-      }
+      }*/
       if(abs(Iarriba - Iabajo) == 1 or abs(Iarriba - Iabajo) == 0){
         //si es 0 es porque esta posicionado bien sino es en el anterior a su posicion
         if(abs(Iarriba - Iabajo) == 0){
@@ -117,12 +117,12 @@ void calculaK(size_t limiteK){
     colaPrioridad.push(make_tuple(numeric_limits<int>::max(),1));
     colaPrioridad.push(make_tuple(numeric_limits<int>::max()-2,limiteK));
     colaPrioridad.push(make_tuple(numeric_limits<int>::max()-1,ceil(limiteK/2)));
-    size_t numCentroides = 0, kCalculo = 0;
-    double  kSiguiente, kAnterior, kActual, kActualAnterior, kAnteriorAnterior, kSiguienteAnterior, pPendiente, sPendiente;
+    size_t numCentroides = 0, kCalculo = 0, kMejor = 0;
+    double  kSiguiente, kAnterior, kActual, kActualAnterior, kAnteriorAnterior, kSiguienteAnterior, pPendiente, sPendiente,mejorPendiente;
     double cont = 0.0, anguloAnterior = 0.0, anguloSiguiente = 0.0, anguloPrioridad = 0.0;
     bool entrada = false, parada = false, encontrado = false;
     vectorTupla indiceK;
-    unordered_map<size_t, double> todos_k;
+    map<size_t, double> todos_k;
     while(parada == false)
     {
       zmqpp::message saludo;
@@ -176,14 +176,24 @@ void calculaK(size_t limiteK){
         if(kSiguiente < indiceK.size() and kSiguiente > -1 and kAnterior > -1){
           int mitad = ceil(abs(((double)get<0>(indiceK[kActual]) - (double)get<0>(indiceK[kAnterior]))/2));
           //size_t mitadSiguiente = ceil(abs(kSiguiente-kActual)/2);
-          colaPrioridad.push(make_tuple(abs(atan(pPendiente) - atan(sPendiente)), (get<0>(indiceK[kActual]) - mitad)));
-          colaPrioridad.push(make_tuple(abs(atan(pPendiente) - atan(sPendiente)), (get<0>(indiceK[kActual]) + mitad)));
-          entrada = true;
+          double diferenciaPendiente = abs(atan(pPendiente) - atan(sPendiente));
+          if(diferenciaPendiente > mejorPendiente){
+            cout << "la mejor pendiente es: " << diferenciaPendiente << " el mejor k seria: " << get<0>(indiceK[kActual]) <<endl; 
+            mejorPendiente = diferenciaPendiente;
+            kMejor  = get<0>(indiceK[kActual]);
+          }else{
+            if(get<0>(indiceK[kAnterior]) == (get<0>(indiceK[kActual]) -1) and get<0>(indiceK[kSiguiente]) == (get<0>(indiceK[kActual]) +1)){
+              parada = true;
+            }
+          } 
+          colaPrioridad.push(make_tuple(diferenciaPendiente, (get<0>(indiceK[kActual]) - mitad)));
+          colaPrioridad.push(make_tuple(diferenciaPendiente, (get<0>(indiceK[kActual]) + mitad)));
           cont++;
         }  
       }
       while(entrada == false){
-        if(colaPrioridad.size() != 0){
+        cout << "tamano cola "<<colaPrioridad.size()<<endl;
+        if(colaPrioridad.size() > 0){
           numCentroides = get<1>(colaPrioridad.top());
           colaPrioridad.pop();
         }
@@ -191,11 +201,13 @@ void calculaK(size_t limiteK){
         auto search = todos_k.find(numCentroides);
         if(search != todos_k.end())
         {
-          if(colaPrioridad.size() == 0){
+          if(colaPrioridad.size() < 1){
             numCentroides = ceil(numCentroides/2);
+            cout << "nuevo k: "<<numCentroides<<endl;
           }
         }
         else{
+        cout << "entre por falso"<<endl;
         entrada = true;
         todos_k.insert({numCentroides,0.0});
         string calculo_aleatorio = to_string(numCentroides);
@@ -207,7 +219,7 @@ void calculaK(size_t limiteK){
       entrada = false;
     }
     //server.close();
-    cout << "El mejor k es: " << get<0>(indiceK[kActual]) << endl;
+    cout << "El mejor k es: " << kMejor << endl;
 }
 
 int main(){
