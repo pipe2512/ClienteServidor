@@ -268,15 +268,18 @@ int main(){
   calculoNormas(vectorVectores, normas);
   cout << "Normas calculadas..." << endl;
   context context;
-  socket cliente_recv(context,socket_type::pull);
-  cliente_recv.connect("tcp://localhost:5557");
-  socket cliente_send(context,socket_type::push);
-  cliente_send.connect("tcp://localhost:5558");
+  socket cliente(context,socket_type::req);
+  cliente.connect("tcp://localhost:5557");
+  zmqpp::message msg;
+  msg << "hola";
+  cliente.send(msg);
+  /*socket cliente_send(context,socket_type::push);
+  cliente_send.connect("tcp://localhost:5558");*/
   string x;
   while(true){
-    zmqpp::message msg;
-    cliente_recv.receive(msg);
-    msg >> x;
+    zmqpp::message msg2;
+    cliente.receive(msg2);
+    msg2 >> x;
     cout<<"K recibido es: "<< atoi(x.c_str()) <<endl;
     size_t numCentroides = atoi(x.c_str());
     //cout << "ingrese el número de centroides: ";
@@ -284,8 +287,9 @@ int main(){
     generarCentroidePuntos(centroides, numCentroides, vectorVectores);
     //Timer t;
     zmqpp::message resultado;
-    resultado << to_string(means(vectorVectores, centroides, normas, distancias, numCentroides));
+    string m = to_string(means(vectorVectores, centroides, normas, distancias, numCentroides));
+    resultado << m+";"+x;
     centroides.clear();
-    cliente_send.send(resultado);
+    cliente.send(resultado);
   }
 }
