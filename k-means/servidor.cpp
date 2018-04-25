@@ -190,33 +190,40 @@ void calculaK(size_t limiteK){
           }
         }  
       }
-      if(todos_k.size() >= limiteK){
+      if(indiceK.size() >= limiteK){
         parada = true;
-        entrada = true;
       }
       while(entrada == false){
-        if(colaPrioridad.size() > 0){
-          numCentroides = get<1>(colaPrioridad.top());
-          colaPrioridad.pop();
-        }
-        auto search = todos_k.find(numCentroides);
-        if(search != todos_k.end())
-        {
-          if(colaPrioridad.size() < 1){
-            numCentroides = ceil(numCentroides/2);
-            if(numCentroides == 0){
-              numCentroides = limiteK - cont;
-              cont++;
-            }
-          }
+        if(todos_k.size() >= limiteK){
+          zmqpp::message fin;
+          fin << "final";
+          server.send(fin);
+          entrada = true;
         }
         else{
-        entrada = true;
-        todos_k.insert({numCentroides,0.0});
-        string calculo_aleatorio = to_string(numCentroides);
-        zmqpp::message msg;
-        msg << calculo_aleatorio;
-        server.send(msg);
+          if(colaPrioridad.size() > 0){
+            numCentroides = get<1>(colaPrioridad.top());
+            colaPrioridad.pop();
+          }
+          auto search = todos_k.find(numCentroides);
+          if(search != todos_k.end())
+          {
+            if(colaPrioridad.size() < 1){
+              numCentroides = ceil(numCentroides/2);
+              if(numCentroides == 0){
+                numCentroides = limiteK - cont;
+                cont++;
+              }
+            }
+          }
+          else{
+          entrada = true;
+          todos_k.insert({numCentroides,0.0});
+          string calculo_aleatorio = to_string(numCentroides);
+          zmqpp::message msg;
+          msg << calculo_aleatorio;
+          server.send(msg);
+          }
         }
       }
       entrada = false;
@@ -226,5 +233,5 @@ void calculaK(size_t limiteK){
 }
 
 int main(){
-	calculaK(20);
+	calculaK(10);
 }

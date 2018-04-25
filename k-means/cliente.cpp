@@ -276,10 +276,15 @@ int main(){
   /*socket cliente_send(context,socket_type::push);
   cliente_send.connect("tcp://localhost:5558");*/
   string x;
-  while(true){
+  bool final = false;
+  while(final == false){
     zmqpp::message msg2;
     cliente.receive(msg2);
     msg2 >> x;
+    if(x == "final"){
+      final = true;
+    }
+    else{
     cout<<"K recibido es: "<< atoi(x.c_str()) <<endl;
     size_t numCentroides = atoi(x.c_str());
     //cout << "ingrese el número de centroides: ";
@@ -291,5 +296,7 @@ int main(){
     resultado << m+";"+x;
     centroides.clear();
     cliente.send(resultado);
+    }
   }
+  cout << "Ya termine mi labor" << endl;
 }
